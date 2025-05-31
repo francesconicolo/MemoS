@@ -1,0 +1,11 @@
+{
+  "files.associations": {
+    "unistd.h": "c",
+    "sdl.h": "c",
+    "drawer.h": "c"
+  },
+  "editor.defaultFormatter": "ms-vscode.cpptools",
+  "editor.formatOnPaste": false,
+  "editor.formatOnSave": true,
+  "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: Google, ColumnLimit: 0 }"
+}
