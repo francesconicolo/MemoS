@@ -2,7 +2,10 @@
   "files.associations": {
     "unistd.h": "c",
     "sdl.h": "c",
-    "drawer.h": "c"
+    "drawer.h": "c",
+    "sdl_ttf.h": "c",
+    "stdbool.h": "c",
+    "types.h": "c"
   },
   "editor.defaultFormatter": "ms-vscode.cpptools",
   "editor.formatOnPaste": false,

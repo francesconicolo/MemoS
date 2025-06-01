@@ -1,9 +1,9 @@
 #include "gameScreen.h"
 
 #include "drawer.h"
-void initGame(GameStatus* gameStatus, int GRID_SIZE, int gameLength) {
+void initGame(GameStatus** gameStatus, int GRID_SIZE, int gameLength) {
   srand(time(0));
-
+  *gameStatus = (GameStatus*)malloc(gameLength * sizeof(GameStatus));
   // 1. Crea tutte le coordinate possibili
   int totalCells = GRID_SIZE * GRID_SIZE;
   int coords[totalCells][2];
@@ -29,18 +29,19 @@ void initGame(GameStatus* gameStatus, int GRID_SIZE, int gameLength) {
 
   // 3. Prendi le prime gameLength coordinate
   for (int i = 0; i < gameLength; i++) {
-    gameStatus[i].coordinate_x = coords[i][0];
-    gameStatus[i].coordinate_y = coords[i][1];
-    gameStatus[i].status = false;
+    (*gameStatus)[i].coordinate_x = coords[i][0];
+    (*gameStatus)[i].coordinate_y = coords[i][1];
+    (*gameStatus)[i].status = false;
   }
 }
 
-void initResponse(GameStatus* gameStatus, int GRID_SIZE, int gameLength) {
+void initResponse(GameStatus** gameStatus, int GRID_SIZE, int gameLength) {
+  *gameStatus = (GameStatus*)malloc(gameLength * sizeof(GameStatus));
   // Inizializza lo stato del gioco con coordinate casuali
   for (int i = 0; i < gameLength; i++) {
-    gameStatus[i].coordinate_x = -1;
-    gameStatus[i].coordinate_y = -1;
-    gameStatus[i].status = false;  // Inizializza lo stato a false
+    (*gameStatus)[i].coordinate_x = -1;
+    (*gameStatus)[i].coordinate_y = -1;
+    (*gameStatus)[i].status = false;  // Inizializza lo stato a false
   }
 }
 
@@ -48,7 +49,6 @@ void handleGameEvents(SDL_Event* event, bool* gameStarted, GameStatus* currentRe
                       int CELL_SIZE, int* currentIndex, int* gameLength,
                       SDL_Rect gameViewport, int GRID_SIZE) {
   if (!(*gameStarted)) return;
-
   if (event->type == SDL_MOUSEBUTTONDOWN && event->button.button == SDL_BUTTON_LEFT) {
     int x = event->button.x - gameViewport.x;
     int y = event->button.y - gameViewport.y;
@@ -91,12 +91,12 @@ void handleGameEvents(SDL_Event* event, bool* gameStarted, GameStatus* currentRe
 }
 
 void renderGameScreen(SDL_Renderer* renderer, TTF_Font* font, int GRID_SIZE, int CELL_SIZE, int gameLength,
-                      GameStatus* initialState, GameStatus* currentResponse, bool* gameStarted, int* currentIndex, int* intialStatesIndex, int offsetX, int offsetY) {
+                      GameStatus* initialState, GameStatus* currentResponse, bool* gameStarted, int* currentIndex, int* intialStatesIndex, int offsetX, int offsetY, int delay) {
   static Uint32 lastTick = 0;  // Persistente tra chiamate
 
   if ((*gameStarted) == false) {
     Uint32 now = SDL_GetTicks();
-    if (now - lastTick >= 500) {
+    if (now - lastTick >= delay) {
       if ((*intialStatesIndex) >= gameLength) {
         *gameStarted = true;  // Inizia il gioco
       } else {
@@ -136,7 +136,7 @@ void renderGameScreen(SDL_Renderer* renderer, TTF_Font* font, int GRID_SIZE, int
             printf("Errore di allocazione memoria\n");
             return;
           }
-          sprintf(buffer, "%d", index);
+          sprintf(buffer, "%d", index + 1);
           if (WriteTextCenter(renderer, font, CELL_SIZE, i, j, buffer) == 1) {
             printf("Errore nel disegnare il testo\n");
           }
@@ -179,7 +179,7 @@ void renderGameScreen(SDL_Renderer* renderer, TTF_Font* font, int GRID_SIZE, int
             printf("Errore di allocazione memoria\n");
             return;
           }
-          sprintf(buffer, "%d", index);
+          sprintf(buffer, "%d", index + 1);
           if (WriteTextCenter(renderer, font, CELL_SIZE, i, j, buffer) == 1) {
             printf("Errore nel disegnare il testo\n");
           }
@@ -188,6 +188,5 @@ void renderGameScreen(SDL_Renderer* renderer, TTF_Font* font, int GRID_SIZE, int
       }
     }
     SDL_RenderPresent(renderer);
-    SDL_Delay(16);  // ~60 FPS
   }
 }

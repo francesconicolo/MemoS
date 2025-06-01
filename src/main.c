@@ -8,6 +8,7 @@
 
 #include "gameScreen.h"
 #include "menuScreen.h"
+#include "types.h"
 
 #define WINDOW_SIZE_W 1000
 #define WINDOW_SIZE_H 700
@@ -17,13 +18,7 @@
 #define CELL_SIZE (BOX_SIZE / GRID_SIZE)
 #define NUM_RADIO 3
 
-typedef enum {
-  SETUP_SCREEN,
-  GAME_SCREEN,
-  END_SCREEN
-} AppState;
-
-AppState currentState = GAME_SCREEN;
+AppState currentState = SETUP_SCREEN;
 
 int main() {
   SDL_Init(SDL_INIT_VIDEO);
@@ -66,16 +61,12 @@ int main() {
   SDL_FreeSurface(bgSurface);
 
   bool gameStarted = false;  // Inizializza lo stato del gioco
-  int gameLength = 10;       // Numero di celle da attivare
-  GameStatus *initialState = malloc(gameLength * sizeof(GameStatus));
-  GameStatus *currentResponse = malloc(gameLength * sizeof(GameStatus));
-  if (!initialState || !currentResponse) {
-    printf("Errore malloc\n");
-    return 1;
-  }
-  initGame(initialState, GRID_SIZE, gameLength);         // Inizializza lo stato del gioco con nuove coordinate
-  initResponse(currentResponse, GRID_SIZE, gameLength);  // Inizializza lo stato corrente con nuove coordinate
-  int currentIndex = 0;                                  // Indice corrente per il ciclo di attivazione
+  int delay = 100;           // Imposta un delay iniziale di 100 ms
+  int gameLength = 4;        // Numero di celle da attivare
+  GameStatus *initialState = NULL;
+  GameStatus *currentResponse = NULL;
+
+  int currentIndex = 0;  // Indice corrente per il ciclo di attivazione
   int intialStatesIndex = 0;
   bool running = true;
   while (running) {
@@ -89,8 +80,8 @@ int main() {
 
       switch (currentState) {
         case SETUP_SCREEN:
-          printf("Handling setup screen events\n");
-          // handleSetupEvents(&event);
+          handleMenuEvents(&event, &currentState, &gameLength, &delay,
+                           &initialState, &currentResponse, GRID_SIZE);
           break;
         case GAME_SCREEN:
           SDL_RenderSetViewport(renderer, &gameViewport);
@@ -106,7 +97,6 @@ int main() {
     switch (currentState) {
       case SETUP_SCREEN:
         renderMenuScreen(renderer, font, gameLength);
-        printf("Rendering setup screen\n");
         break;
       case GAME_SCREEN:
         SDL_RenderSetViewport(renderer, &gameViewport);
@@ -115,14 +105,14 @@ int main() {
         int gridSizePx = GRID_SIZE * CELL_SIZE;
         int offsetX = (gameViewport.w - gridSizePx) / 2;
         int offsetY = (gameViewport.h - gridSizePx) / 2;
-        renderGameScreen(renderer, font, GRID_SIZE, CELL_SIZE, gameLength, initialState, currentResponse, &gameStarted, &currentIndex, &intialStatesIndex, offsetX, offsetY);
+        renderGameScreen(renderer, font, GRID_SIZE, CELL_SIZE, gameLength, initialState, currentResponse, &gameStarted, &currentIndex, &intialStatesIndex, offsetX, offsetY, delay);
         break;
       case END_SCREEN:
         printf("Rendering end screen\n");
         // renderEndScreen(renderer, font);
         break;
     }
-
+    SDL_Delay(16);                // ~60 FPS
     SDL_RenderPresent(renderer);  // <-- ti mancava anche questa bro!
   }
 

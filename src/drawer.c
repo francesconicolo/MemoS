@@ -22,3 +22,28 @@ int WriteTextCenter(SDL_Renderer *renderer, TTF_Font *font, int cell_size, int i
   SDL_DestroyTexture(textTexture);
   return 0;
 }
+
+int WriteTextButton(SDL_Renderer *renderer, TTF_Font *font, SDL_Rect buttonRect, const char *text) {
+  SDL_Color textColor = {255, 255, 255, 255};  // bianco
+  SDL_Surface *textSurface = TTF_RenderText_Solid(font, text, textColor);
+  if (!textSurface) return 1;
+
+  SDL_Texture *textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
+  if (!textTexture) {
+    SDL_FreeSurface(textSurface);
+    return 1;
+  }
+
+  SDL_Rect textRect;
+  textRect.x = buttonRect.x + (buttonRect.w - textSurface->w) / 2;
+  textRect.y = buttonRect.y + (buttonRect.h - textSurface->h) / 2;
+  textRect.w = textSurface->w;
+  textRect.h = textSurface->h;
+
+  SDL_RenderCopy(renderer, textTexture, NULL, &textRect);
+
+  SDL_FreeSurface(textSurface);
+  SDL_DestroyTexture(textTexture);
+
+  return 0;
+}
