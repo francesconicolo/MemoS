@@ -1,8 +1,8 @@
 # Nome dell'eseguibile
-TARGET = prato_fiorito
+TARGET = memos.o
 
 # File sorgente
-SRC = src/main.c src/drawer.c src/gameScreen.c
+SRC = src/main.c src/drawer.c src/gameScreen.c src/menuScreen.c
 
 # Compiler
 CC = gcc

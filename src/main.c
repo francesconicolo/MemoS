@@ -7,9 +7,14 @@
 #include <unistd.h>
 
 #include "gameScreen.h"
-#define WINDOW_SIZE 500
+#include "menuScreen.h"
+
+#define WINDOW_SIZE_W 1000
+#define WINDOW_SIZE_H 700
+
+#define BOX_SIZE 400
 #define GRID_SIZE 5
-#define CELL_SIZE (WINDOW_SIZE / GRID_SIZE)
+#define CELL_SIZE (BOX_SIZE / GRID_SIZE)
 #define NUM_RADIO 3
 
 typedef enum {
@@ -32,10 +37,16 @@ int main() {
   SDL_Window *window = SDL_CreateWindow(
       "Memos",
       SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-      WINDOW_SIZE, WINDOW_SIZE, 0);
+      WINDOW_SIZE_W, WINDOW_SIZE_H, 0);
 
   SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
   SDL_RendererInfo info;
+  // Calcolo del rettangolo di viewport (la "game box" centrata)
+  SDL_Rect gameViewport = {
+      (WINDOW_SIZE_W - BOX_SIZE) / 2,
+      (WINDOW_SIZE_H - BOX_SIZE) / 2,
+      BOX_SIZE,
+      BOX_SIZE};
   SDL_GetRendererInfo(renderer, &info);
   printf("Renderer in uso: %s\n", info.name);
   if (!window) {
@@ -46,6 +57,13 @@ int main() {
     printf("Errore creazione renderer: %s\n", SDL_GetError());
     return 1;
   }
+  SDL_Surface *bgSurface = SDL_LoadBMP("assets/background.bmp");
+  if (!bgSurface) {
+    SDL_Log("Failed to load background: %s", SDL_GetError());
+    return 1;
+  }
+  SDL_Texture *background = SDL_CreateTextureFromSurface(renderer, bgSurface);
+  SDL_FreeSurface(bgSurface);
 
   bool gameStarted = false;  // Inizializza lo stato del gioco
   int gameLength = 10;       // Numero di celle da attivare
@@ -61,6 +79,8 @@ int main() {
   int intialStatesIndex = 0;
   bool running = true;
   while (running) {
+    SDL_RenderSetViewport(renderer, NULL);
+    SDL_RenderCopy(renderer, background, NULL, NULL);  // sfondo su tutta la finestra
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       if (event.type == SDL_QUIT) {
@@ -73,7 +93,8 @@ int main() {
           // handleSetupEvents(&event);
           break;
         case GAME_SCREEN:
-          handleGameEvents(&event, &gameStarted, currentResponse, CELL_SIZE, &currentIndex, &gameLength);
+          SDL_RenderSetViewport(renderer, &gameViewport);
+          handleGameEvents(&event, &gameStarted, currentResponse, CELL_SIZE, &currentIndex, &gameLength, gameViewport, GRID_SIZE);
           break;
         case END_SCREEN:
           printf("Handling end screen events\n");
@@ -82,16 +103,19 @@ int main() {
       }
     }
 
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    SDL_RenderClear(renderer);
-
     switch (currentState) {
       case SETUP_SCREEN:
-        // renderSetupScreen(renderer, font);
+        renderMenuScreen(renderer, font, gameLength);
         printf("Rendering setup screen\n");
         break;
       case GAME_SCREEN:
-        renderGameScreen(renderer, font, GRID_SIZE, CELL_SIZE, gameLength, initialState, currentResponse, &gameStarted, &currentIndex, &intialStatesIndex);
+        SDL_RenderSetViewport(renderer, &gameViewport);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderFillRect(renderer, NULL);
+        int gridSizePx = GRID_SIZE * CELL_SIZE;
+        int offsetX = (gameViewport.w - gridSizePx) / 2;
+        int offsetY = (gameViewport.h - gridSizePx) / 2;
+        renderGameScreen(renderer, font, GRID_SIZE, CELL_SIZE, gameLength, initialState, currentResponse, &gameStarted, &currentIndex, &intialStatesIndex, offsetX, offsetY);
         break;
       case END_SCREEN:
         printf("Rendering end screen\n");
@@ -107,6 +131,7 @@ int main() {
   free(currentResponse);
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
+  SDL_DestroyTexture(background);
   TTF_CloseFont(font);
   TTF_Quit();
   SDL_Quit();

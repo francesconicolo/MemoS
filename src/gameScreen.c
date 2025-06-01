@@ -44,30 +44,45 @@ void initResponse(GameStatus* gameStatus, int GRID_SIZE, int gameLength) {
   }
 }
 
-void handleGameEvents(SDL_Event* event, bool* gameStarted, GameStatus* currentResponse, int CELL_SIZE, int* currentIndex, int* gameLength) {
-  if ((*gameStarted) == true) {
-    if (event->type == SDL_MOUSEBUTTONDOWN && (*currentIndex) <= (*gameLength)) {
-      int x = event->button.x / CELL_SIZE;
-      int y = event->button.y / CELL_SIZE;
-      if (currentResponse[(*currentIndex) - 1].coordinate_x == x &&
-          currentResponse[(*currentIndex) - 1].coordinate_y == y) {
-        currentResponse[(*currentIndex) - 1].coordinate_x = -1;
-        currentResponse[(*currentIndex) - 1].coordinate_y = -1;
-        currentResponse[(*currentIndex) - 1].status = false;  // Disattiva la cella corrente
-        (*currentIndex)--;                                    // Torna indietro di un passo
+void handleGameEvents(SDL_Event* event, bool* gameStarted, GameStatus* currentResponse,
+                      int CELL_SIZE, int* currentIndex, int* gameLength,
+                      SDL_Rect gameViewport, int GRID_SIZE) {
+  if (!(*gameStarted)) return;
+
+  if (event->type == SDL_MOUSEBUTTONDOWN && event->button.button == SDL_BUTTON_LEFT) {
+    int x = event->button.x - gameViewport.x;
+    int y = event->button.y - gameViewport.y;
+
+    // Verifica che il click sia dentro la game box
+    if (x >= 0 && x < gameViewport.w && y >= 0 && y < gameViewport.h) {
+      int cellX = x / CELL_SIZE;
+      int cellY = y / CELL_SIZE;
+
+      // Controllo se sta tentando di "deselezionare" la cella precedente
+      if (*currentIndex > 0 &&
+          currentResponse[*currentIndex - 1].coordinate_x == cellX &&
+          currentResponse[*currentIndex - 1].coordinate_y == cellY) {
+        currentResponse[*currentIndex - 1].coordinate_x = -1;
+        currentResponse[*currentIndex - 1].coordinate_y = -1;
+        currentResponse[*currentIndex - 1].status = false;
+        (*currentIndex)--;
       } else {
-        bool found = false;
-        for (int k = 0; k < (*gameLength); k++) {
-          if (currentResponse[k].status == true &&
-              currentResponse[k].coordinate_x == x &&
-              currentResponse[k].coordinate_y == y) {
-            found = true;
+        // Controlla se è già stata selezionata
+        bool alreadySelected = false;
+        for (int k = 0; k < *gameLength; k++) {
+          if (currentResponse[k].status &&
+              currentResponse[k].coordinate_x == cellX &&
+              currentResponse[k].coordinate_y == cellY) {
+            alreadySelected = true;
+            break;
           }
         }
-        if (found == false && (*currentIndex) < (*gameLength)) {
-          currentResponse[(*currentIndex)].coordinate_x = x;  // Imposta la coordinata x
-          currentResponse[(*currentIndex)].coordinate_y = y;  // Imposta la coordinata y
-          currentResponse[(*currentIndex)].status = true;     // Attiva la cella corrente
+
+        // Se non è stata selezionata, la aggiunge
+        if (!alreadySelected && *currentIndex < *gameLength) {
+          currentResponse[*currentIndex].coordinate_x = cellX;
+          currentResponse[*currentIndex].coordinate_y = cellY;
+          currentResponse[*currentIndex].status = true;
           (*currentIndex)++;
         }
       }
@@ -76,8 +91,9 @@ void handleGameEvents(SDL_Event* event, bool* gameStarted, GameStatus* currentRe
 }
 
 void renderGameScreen(SDL_Renderer* renderer, TTF_Font* font, int GRID_SIZE, int CELL_SIZE, int gameLength,
-                      GameStatus* initialState, GameStatus* currentResponse, bool* gameStarted, int* currentIndex, int* intialStatesIndex) {
+                      GameStatus* initialState, GameStatus* currentResponse, bool* gameStarted, int* currentIndex, int* intialStatesIndex, int offsetX, int offsetY) {
   static Uint32 lastTick = 0;  // Persistente tra chiamate
+
   if ((*gameStarted) == false) {
     Uint32 now = SDL_GetTicks();
     if (now - lastTick >= 500) {
@@ -93,7 +109,7 @@ void renderGameScreen(SDL_Renderer* renderer, TTF_Font* font, int GRID_SIZE, int
 
     for (int i = 0; i < GRID_SIZE; i++) {
       for (int j = 0; j < GRID_SIZE; j++) {
-        SDL_Rect cell = {j * CELL_SIZE, i * CELL_SIZE, CELL_SIZE - 2, CELL_SIZE - 2};
+        SDL_Rect cell = {offsetX + j * CELL_SIZE, offsetY + i * CELL_SIZE, CELL_SIZE - 1, CELL_SIZE - 1};
 
         // Controlla se in questa cella c'è qualcosa da scrivere
         int index = -1;
@@ -111,7 +127,8 @@ void renderGameScreen(SDL_Renderer* renderer, TTF_Font* font, int GRID_SIZE, int
         }
 
         SDL_RenderFillRect(renderer, &cell);
-
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);  // nero
+        SDL_RenderDrawRect(renderer, &cell);
         if (index != -1) {
           int num_digits = snprintf(NULL, 0, "%d", index) + 1;
           char* buffer = (char*)malloc(num_digits);
@@ -132,7 +149,7 @@ void renderGameScreen(SDL_Renderer* renderer, TTF_Font* font, int GRID_SIZE, int
   } else {
     for (int i = 0; i < GRID_SIZE; i++) {
       for (int j = 0; j < GRID_SIZE; j++) {
-        SDL_Rect cell = {j * CELL_SIZE, i * CELL_SIZE, CELL_SIZE - 2, CELL_SIZE - 2};
+        SDL_Rect cell = {offsetX + j * CELL_SIZE, offsetY + i * CELL_SIZE, CELL_SIZE - 1, CELL_SIZE - 1};
         int index = -1;
         for (int k = 0; k < gameLength; k++) {
           if (currentResponse[k].coordinate_x == j &&
@@ -144,7 +161,7 @@ void renderGameScreen(SDL_Renderer* renderer, TTF_Font* font, int GRID_SIZE, int
         }
         if (index != -1) {
           if (index == *currentIndex - 1) {
-            SDL_SetRenderDrawColor(renderer, 220, 0, 0, 255);  // Blu per le celle già attivate
+            SDL_SetRenderDrawColor(renderer, 220, 0, 0, 255);  // Roosso più acceso per le celle già attivate
           } else {
             SDL_SetRenderDrawColor(renderer, 180, 0, 0, 255);  // Rosso per le celle attivate ma non ancora completate
           }
@@ -152,6 +169,9 @@ void renderGameScreen(SDL_Renderer* renderer, TTF_Font* font, int GRID_SIZE, int
           SDL_SetRenderDrawColor(renderer, 0, 200, 0, 255);  // Verde
         }
         SDL_RenderFillRect(renderer, &cell);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);  // nero
+        SDL_RenderDrawRect(renderer, &cell);
+
         if (index != -1) {
           int num_digits = snprintf(NULL, 0, "%d", index) + 1;
           char* buffer = (char*)malloc(num_digits);
